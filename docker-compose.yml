@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobpulse}
+      POSTGRES_DB: ${POSTGRES_DB:-jobpulse}
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobpulse} -d ${POSTGRES_DB:-jobpulse}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobpulse}:${POSTGRES_PASSWORD:-jobpulse}@db:5432/${POSTGRES_DB:-jobpulse}
+      HIMALAYAS_FEED_URL: ${HIMALAYAS_FEED_URL:-https://himalayas.app/jobs/rss}
+      FETCH_TIMEOUT_SECONDS: ${FETCH_TIMEOUT_SECONDS:-20.0}
+      FETCH_MAX_RETRIES: ${FETCH_MAX_RETRIES:-3}
+      MINIMUM_REQUEST_INTERVAL_SECONDS: ${MINIMUM_REQUEST_INTERVAL_SECONDS:-5.0}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174,http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "5174:80"
+
+volumes:
+  postgres_data:
