@@ -49,11 +49,6 @@ services:
     # At Render startup, replace that local Docker hostname with
     # the deployed backend's public Render URL.
 
-    dockerCommand: >
-      /bin/sh -c
-      'sed -i "s|http://backend:8000|$BACKEND_URL|g"
-      /etc/nginx/conf.d/default.conf &&
-      exec nginx -g "daemon off;"'
     envVars:
       - key: BACKEND_URL
         fromService:
