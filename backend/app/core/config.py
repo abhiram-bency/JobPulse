@@ -14,10 +14,31 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 55432
 
-    @property
+    # changed area ---------------------------------------------------------------
+
+    """@property
     def resolved_database_url(self) -> str:
         if self.database_url:
             return self.database_url
+        return (
+            f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )"""
+    @property
+    def resolved_database_url(self) -> str:
+        if self.database_url:
+            url = self.database_url
+
+            # Render may provide postgres:// or postgresql://.
+            # Explicitly select the Psycopg 3 SQLAlchemy dialect.
+            if url.startswith("postgres://"):
+                return url.replace("postgres://", "postgresql+psycopg://", 1)
+
+            if url.startswith("postgresql://"):
+                return url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+            return url
+
         return (
             f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
